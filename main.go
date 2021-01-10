@@ -35,27 +35,21 @@ func main() {
 	defer f.Close()
 
 	scanner := bufio.NewScanner(f)
-
 	scanner.Split(bufio.ScanLines)
-	var text []string
-
-	for scanner.Scan() {
-		text = append(text, scanner.Text())
-	}
-
 	companies := []company{}
-	for index, line := range text {
-		// Skip first value since it is shit.
-		if index == 0 {
-			continue
-		}
 
-		splittedString := strings.Split(line, ",")
+	// Skip first line since it should not be parsed
+	scanner.Scan()
+	for scanner.Scan() {
+		splittedString := strings.Split(scanner.Text(), ",")
 		company := createCompany(splittedString)
 		companies = append(companies, company)
 	}
 
-	jsonCompanies, _ := json.Marshal(companies)
+	jsonCompanies, err := json.Marshal(companies)
+	if err != nil {
+		log.Fatalf("Could not parse companies")
+	}
 	ioutil.WriteFile(*destination, jsonCompanies, 0644)
 }
 
