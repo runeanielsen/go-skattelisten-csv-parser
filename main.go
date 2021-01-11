@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -42,25 +43,29 @@ func main() {
 	scanner.Scan()
 	for scanner.Scan() {
 		splittedString := strings.Split(scanner.Text(), ",")
-		company := createCompany(splittedString)
+		company, err := createCompany(splittedString)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		companies = append(companies, company)
 	}
 
 	jsonCompanies, err := json.Marshal(companies)
 	if err != nil {
-		log.Fatalf("Could not parse companies")
+		log.Fatal("Could not parse companies to json")
 	}
 	ioutil.WriteFile(*destination, jsonCompanies, 0644)
 }
 
-func createCompany(attributes []string) company {
+func createCompany(attributes []string) (company, error) {
 	incomeYearStr := strings.TrimSpace(attributes[3])
 	if incomeYearStr == "" {
 		incomeYearStr = "0"
 	}
 	incomeYear, err := strconv.Atoi(incomeYearStr)
 	if err != nil {
-		log.Fatalf("Could not parse income year %s", incomeYearStr)
+		return company{}, fmt.Errorf("Could not parse incomeYear '%s'", incomeYearStr)
 	}
 
 	deficitStr := strings.TrimSpace(attributes[9])
@@ -69,7 +74,7 @@ func createCompany(attributes []string) company {
 	}
 	deficit, err := strconv.ParseInt(deficitStr, 10, 64)
 	if err != nil {
-		log.Fatalf("Could not parse deficit '%s'", deficitStr)
+		return company{}, fmt.Errorf("Could not parse deficit '%s'", deficitStr)
 	}
 
 	corporateTaxStr := strings.TrimSpace(attributes[10])
@@ -78,7 +83,7 @@ func createCompany(attributes []string) company {
 	}
 	corporateTax, err := strconv.ParseInt(corporateTaxStr, 10, 64)
 	if err != nil {
-		log.Fatalf("Could not parse corporate tax '%s'", corporateTaxStr)
+		return company{}, fmt.Errorf("Could not parse corporate tax '%s'", corporateTaxStr)
 	}
 
 	return company{
@@ -90,5 +95,5 @@ func createCompany(attributes []string) company {
 		TaxableIncome: attributes[8],
 		Deficit:       deficit,
 		CorporateTax:  corporateTax,
-	}
+	}, nil
 }
