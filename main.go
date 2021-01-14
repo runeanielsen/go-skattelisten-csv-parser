@@ -1,10 +1,11 @@
 package main
 
 import (
-	"bufio"
+	"encoding/csv"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -28,22 +29,33 @@ func main() {
 	destination := flag.String("d", "", "Destination JSON file.")
 	flag.Parse()
 
-	f, err := os.Open(*source)
-	if err != nil {
-		log.Fatalf("error opening file: %v\n", err)
-	}
+	run(*source, *destination)
+}
 
-	defer f.Close()
+func run(source string, destination string) {
+	r, err := os.Open(source)
 
-	scanner := bufio.NewScanner(f)
-	scanner.Split(bufio.ScanLines)
+	cr := csv.NewReader(r)
+	cr.ReuseRecord = true
+
 	companies := []company{}
 
-	// Skip first line since it should not be parsed
-	scanner.Scan()
-	for scanner.Scan() {
-		splittedString := strings.Split(scanner.Text(), ",")
-		company, err := createCompany(splittedString)
+	for i := 0; ; i++ {
+		row, err := cr.Read()
+
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if i == 0 {
+			continue
+		}
+
+		company, err := createCompany(row)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -55,7 +67,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Could not parse companies to json")
 	}
-	ioutil.WriteFile(*destination, jsonCompanies, 0644)
+	ioutil.WriteFile(destination, jsonCompanies, 0644)
 }
 
 func createCompany(attributes []string) (company, error) {
